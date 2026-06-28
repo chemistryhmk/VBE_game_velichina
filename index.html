@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Fusion: Химический реактор VBE</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome для иконок -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Tone.js для генерации звуковых эффектов -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #020617;
+            overflow-x: hidden;
+        }
+        
+        .font-game {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Неоновое свечение */
+        .neon-border-indigo {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.25), inset 0 0 10px rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.4);
+        }
+        .neon-border-indigo:hover, .neon-border-indigo.active {
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.6), inset 0 0 15px rgba(99, 102, 241, 0.2);
+            border: 1px solid rgba(99, 102, 241, 0.8);
+        }
+
+        .neon-border-amber {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.25), inset 0 0 10px rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+        .neon-border-amber:hover, .neon-border-amber.active {
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.6), inset 0 0 15px rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.8);
+        }
+
+        .neon-border-emerald {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.25), inset 0 0 10px rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+        .neon-border-emerald:hover, .neon-border-emerald.active {
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.6), inset 0 0 15px rgba(16, 185, 129, 0.2);
+            border: 1px solid rgba(16, 185, 129, 0.8);
+        }
+
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.25), inset 0 0 10px rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.4);
+        }
+        .neon-border-cyan:hover, .neon-border-cyan.active {
+            box-shadow: 0 0 25px rgba(6, 182, 212, 0.6), inset 0 0 15px rgba(6, 182, 212, 0.2);
+            border: 1px solid rgba(6, 182, 212, 0.8);
+        }
+
+        /* Вращение орбит */
+        @keyframes rotate-clockwise {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes rotate-counter {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+        .animate-orbit-1 {
+            animation: rotate-clockwise 40s linear infinite;
+        }
+        .animate-orbit-2 {
+            animation: rotate-counter 55s linear infinite;
+        }
+
+        /* Космическое мерцание */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.3; transform: scale(0.98); }
+            50% { opacity: 0.8; transform: scale(1.02); }
+        }
+        .animate-pulse-slow {
+            animation: pulse-slow 6s ease-in-out infinite;
+        }
+
+        /* Тряска при ошибке */
+        @keyframes reactor-shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            10% { transform: translate(-4px, -2px) rotate(-1deg); }
+            30% { transform: translate(3px, 4px) rotate(1deg); }
+            50% { transform: translate(-3px, 1px) rotate(-1deg); }
+            70% { transform: translate(4px, -3px) rotate(1deg); }
+            90% { transform: translate(-1px, 3px) rotate(0deg); }
+        }
+        .reactor-error {
+            animation: reactor-shake 0.4s ease-in-out;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 40px rgba(239, 68, 68, 0.7) !important;
+        }
+
+        /* Энергетические импульсы */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .interactive-section {
+            position: relative;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased">
+
+    <canvas id="space-starfield"></canvas>
+
+    <!-- HEADER / CONTROL UNIT -->
+    <header class="interactive-section border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md py-4 px-4 sm:px-8">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 rounded-xl shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-atom text-2xl text-white animate-spin" style="animation-duration: 8s;"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 font-game">QUANTUM FUSION</h1>
+                    <p class="text-xs text-indigo-300/80 uppercase tracking-widest font-game">Реактор стехиометрических величин VBE</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <!-- Sound Toggle -->
+                <button onclick="toggleAudio()" id="audio-toggle-btn" class="bg-slate-900 hover:bg-slate-800 border border-slate-700/60 p-2.5 rounded-xl text-xs transition-all flex items-center gap-2 text-rose-400">
+                    <i class="fa-solid fa-volume-xmark" id="audio-icon"></i> <span id="audio-text" class="font-game">ЗВУК: ВЫКЛ</span>
+                </button>
+                
+                <!-- Language Command Toggle -->
+                <div class="bg-slate-900 border border-slate-800 p-1 rounded-xl flex font-game">
+                    <button onclick="setLanguage('ru')" id="lang-ru" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white">RU</button>
+                    <button onclick="setLanguage('lt')" id="lang-lt" class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400">LT</button>
+                </div>
+
+                <button onclick="resetGame()" class="bg-slate-900 hover:bg-slate-800 border border-slate-700/60 p-2.5 rounded-xl transition-all" title="Перезапустить">
+                    <i class="fa-solid fa-sync text-indigo-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE INTERFACE -->
+    <main class="interactive-section flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex flex-col gap-6">
+        
+        <!-- Scoreboard & Quantum Core Progress -->
+        <div class="glass-panel rounded-2xl p-4 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
+                    <i class="fa-solid fa-bolt-lightning text-xl animate-pulse"></i>
+                </div>
+                <div>
+                    <h2 class="font-bold text-slate-100 font-game text-sm sm:text-base tracking-wide" id="prog-title">СТАТУС СИНТЕЗА ЯДРА</h2>
+                    <p class="text-xs text-indigo-300/60" id="prog-subtitle">Свяжите все 11 ключевых величин для завершения реакции</p>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="flex-grow max-w-md w-full flex items-center gap-3">
+                <div class="w-full bg-slate-950/80 h-3 rounded-full overflow-hidden border border-slate-800">
+                    <div id="progress-bar-fill" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full transition-all duration-700" style="width: 0%"></div>
+                </div>
+                <span class="text-xs font-bold text-indigo-300 font-game shrink-0" id="progress-ratio">0/11</span>
+            </div>
+
+            <!-- Game Stats -->
+            <div class="flex items-center gap-3 font-game">
+                <div class="px-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-center min-w-[80px]">
+                    <div class="text-[9px] text-slate-400 uppercase tracking-widest" id="lbl-energy">ЭНЕРГИЯ</div>
+                    <div class="text-base font-black text-emerald-400" id="score-counter">0</div>
+                </div>
+                <div class="px-4 py-2 bg-slate-950/80 border border-slate-800 rounded-xl text-center min-w-[80px]">
+                    <div class="text-[9px] text-slate-400 uppercase tracking-widest" id="lbl-errors">ОШИБКИ</div>
+                    <div class="text-base font-black text-rose-500" id="errors-counter">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- REACTOR WORKSPACE -->
+        <div id="game-workspace" class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+            
+            <!-- LEFT PANEL: Orbital Capsules (Symbols & Units) -->
+            <div class="lg:col-span-3 flex flex-col md:grid md:grid-cols-2 lg:flex lg:flex-col gap-4">
+                
+                <!-- Symbols Capsule Bay -->
+                <div class="glass-panel p-4 rounded-2xl flex flex-col gap-3 flex-1">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-widest font-game flex items-center gap-2 border-b border-slate-800/80 pb-2" id="lbl-symbols">
+                        <i class="fa-solid fa-compass-drafting text-amber-400"></i> ОБОЗНАЧЕНИЯ
+                    </h3>
+                    <div id="capsule-symbols" class="flex flex-wrap md:flex-col gap-2.5 max-h-[300px] lg:max-h-[340px] overflow-y-auto custom-scrollbar p-1">
+                        <!-- Dynamic Nodes -->
+                    </div>
+                </div>
+
+                <!-- Units Capsule Bay -->
+                <div class="glass-panel p-4 rounded-2xl flex flex-col gap-3 flex-1">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-widest font-game flex items-center gap-2 border-b border-slate-800/80 pb-2" id="lbl-units">
+                        <i class="fa-solid fa-weight-hanging text-emerald-400"></i> ЕДИНИЦЫ ИЗМЕРЕНИЯ
+                    </h3>
+                    <div id="capsule-units" class="flex flex-wrap md:flex-col gap-2.5 max-h-[300px] lg:max-h-[340px] overflow-y-auto custom-scrollbar p-1">
+                        <!-- Dynamic Nodes -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- CENTER PANEL: The Fusion Reactor Core -->
+            <div class="lg:col-span-6 flex flex-col items-center justify-center glass-panel p-6 sm:p-8 rounded-3xl min-h-[480px] relative overflow-hidden">
+                <!-- Background Glowing Orbits visual -->
+                <div class="absolute w-[340px] h-[340px] rounded-full border border-indigo-500/5 animate-orbit-1 pointer-events-none"></div>
+                <div class="absolute w-[240px] h-[240px] rounded-full border border-purple-500/5 animate-orbit-2 pointer-events-none"></div>
+                
+                <div class="relative z-10 w-full flex flex-col items-center gap-6">
+                    <div class="text-center">
+                        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest font-game bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-full" id="lbl-fusion-reaction">РЕАКЦИЯ СИНТЕЗА</span>
+                        <h3 class="text-lg sm:text-xl font-bold text-white mt-3 px-4 max-w-md h-12 flex items-center justify-center leading-snug" id="target-quantity-name">
+                            Загрузка ядра...
+                        </h3>
+                    </div>
+
+                    <!-- Reactor Visual Interface with 3 slots -->
+                    <div id="reactor-core-ring" class="w-64 h-64 rounded-full border-2 border-indigo-500/20 bg-slate-950/80 flex items-center justify-center relative p-4 transition-all duration-500 shadow-[0_0_50px_rgba(99,102,241,0.05)]">
+                        <!-- Core Center Pulse -->
+                        <div class="absolute inset-4 rounded-full bg-indigo-500/5 border border-indigo-500/10 animate-pulse-slow"></div>
+                        
+                        <!-- Core Hologram Slot: Symbol -->
+                        <div id="slot-symbol" class="absolute top-4 w-16 h-16 rounded-xl bg-slate-900 border border-dashed border-amber-500/30 flex flex-col items-center justify-center transition-all duration-300">
+                            <span class="text-[8px] font-bold text-amber-500/50 uppercase tracking-widest font-game mb-1" id="lbl-slot-symbol">СИМВОЛ</span>
+                            <div class="text-lg font-bold text-amber-400 font-mono" id="slot-symbol-val">-</div>
+                        </div>
+
+                        <!-- Core Hologram Slot: Unit -->
+                        <div id="slot-unit" class="absolute bottom-4 w-20 h-16 rounded-xl bg-slate-900 border border-dashed border-emerald-500/30 flex flex-col items-center justify-center transition-all duration-300">
+                            <span class="text-[8px] font-bold text-emerald-500/50 uppercase tracking-widest font-game mb-1" id="lbl-slot-unit">ЕДИНИЦА</span>
+                            <div class="text-[11px] font-bold text-emerald-400 text-center px-1" id="slot-unit-val">-</div>
+                        </div>
+
+                        <!-- Core Emblem inside -->
+                        <div class="w-20 h-20 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center shadow-inner z-20">
+                            <i class="fa-solid fa-radiation text-3xl text-indigo-500/40 animate-spin" style="animation-duration: 20s;" id="core-emblem-icon"></i>
+                        </div>
+                    </div>
+
+                    <!-- Fusion Command Button -->
+                    <button onclick="fuseReactor()" id="fuse-btn" disabled class="w-full max-w-xs bg-slate-800 text-slate-500 font-game font-bold py-3.5 px-6 rounded-2xl border border-slate-700/60 cursor-not-allowed transition-all text-sm tracking-wider uppercase">
+                        Активировать синтез
+                    </button>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Definitions Capsules -->
+            <div class="lg:col-span-3 flex flex-col gap-4">
+                <div class="glass-panel p-4 rounded-2xl flex flex-col gap-3 h-full">
+                    <h3 class="text-xs font-bold text-indigo-300 uppercase tracking-widest font-game flex items-center gap-2 border-b border-slate-800/80 pb-2" id="lbl-definitions">
+                        <i class="fa-solid fa-graduation-cap text-cyan-400"></i> НАУЧНЫЕ ОПРЕДЕЛЕНИЯ
+                    </h3>
+                    <div id="capsule-defs" class="flex flex-col gap-3 max-h-[640px] overflow-y-auto custom-scrollbar p-1 flex-1">
+                        <!-- Dynamic Nodes -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUCCESS/VICTORY MODAL OVERLAY -->
+        <div id="victory-panel" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
+            <div class="bg-slate-900/90 border border-indigo-500/30 rounded-3xl p-6 sm:p-10 max-w-xl w-full text-center flex flex-col items-center shadow-[0_0_50px_rgba(99,102,241,0.2)] animate-pop relative z-50">
+                <div class="w-24 h-24 bg-gradient-to-tr from-emerald-400 to-indigo-600 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-emerald-500/20">
+                    <i class="fa-solid fa-circle-check text-5xl text-white"></i>
+                </div>
+                
+                <h2 class="text-2xl sm:text-3xl font-black text-white font-game tracking-wider" id="win-title">ЯДРО СТАБИЛИЗИРОВАНО!</h2>
+                <p class="text-slate-400 mt-3 text-sm leading-relaxed" id="win-subtitle">Великолепный результат! Вы успешно завершили ядерный синтез всех величин, продемонстрировав отличное понимание курса VBE.</p>
+                
+                <div class="grid grid-cols-2 gap-4 w-full mt-8 mb-8 max-w-sm font-game">
+                    <div class="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl">
+                        <div class="text-2xl font-black text-emerald-400" id="final-score">150</div>
+                        <div class="text-[9px] text-slate-500 mt-1 uppercase tracking-wider" id="win-score-label">ГЕНЕРАЦИЯ ЭНЕРГИИ</div>
+                    </div>
+                    <div class="p-4 bg-slate-950/60 border border-slate-800 rounded-2xl">
+                        <div class="text-2xl font-black text-rose-500" id="final-errors">0</div>
+                        <div class="text-[9px] text-slate-500 mt-1 uppercase tracking-wider" id="win-errors-label">АКТИВНЫЕ СБОИ</div>
+                    </div>
+                </div>
+
+                <button onclick="restartFullGame()" id="win-restart-btn" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-game font-bold py-4 px-8 rounded-2xl transition-all shadow-lg shadow-indigo-500/25 tracking-widest uppercase text-sm">
+                    Инициировать новый цикл
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- CORE GAME LOGIC -->
+    <script>
+        const quantities = [
+            {
+                id: 1,
+                symbol: "Ar",
+                unitRu: "безразмерная (нет)",
+                unitLt: "bedatė (nėra)",
+                nameRu: "Относительная атомная масса",
+                nameLt: "Santykinė atominė masė",
+                defRu: "Отношение средней массы атома элемента к 1/12 части массы изотопа углерода-12.",
+                defLt: "Elemento vidutinės atomo masės santykis su 1/12 anglies-12 izotopo atomo masės dalimi."
+            },
+            {
+                id: 2,
+                symbol: "Mr",
+                unitRu: "безразмерная (нет)",
+                unitLt: "bedatė (nėra)",
+                nameRu: "Относительная молекулярная масса",
+                nameLt: "Santykinė molekulinė masė",
+                defRu: "Отношение массы молекулы к 1/12 части массы атома изотопа углерода-12.",
+                defLt: "Molekulės masės santykis su 1/12 anglies-12 izotopo atomo masės dalimi."
+            },
+            {
+                id: 3,
+                symbol: "n",
+                unitRu: "моль",
+                unitLt: "mol",
+                nameRu: "Количество вещества",
+                nameLt: "Medžiagos kiekis",
+                defRu: "Физическая величина, определяющая число структурных частиц в порции вещества.",
+                defLt: "Fizikinis dydis, proporcingas medžiagą sudarančių struktūrinių dalelių skaičiui."
+            },
+            {
+                id: 4,
+                symbol: "m",
+                unitRu: "г (кг)",
+                unitLt: "g (kg)",
+                nameRu: "Масса",
+                nameLt: "Masė",
+                defRu: "Мера инертных и гравитационных свойств вещества, связывает количество вещества и молярную массу.",
+                defLt: "Fizikinis dydis, apibūdinantis medžiagos inercines ir gravitacines savybes."
+            },
+            {
+                id: 5,
+                symbol: "V",
+                unitRu: "дм³ (л)",
+                unitLt: "dm³ (l)",
+                nameRu: "Объем",
+                nameLt: "Tūris",
+                defRu: "Количественная характеристика трехмерного пространства, занимаемого порцией тела.",
+                defLt: "Fizikinis dydis, apibūdinantis objekto užimamą erdvinę talpą."
+            },
+            {
+                id: 6,
+                symbol: "ρ",
+                unitRu: "г/см³ (г/дм³)",
+                unitLt: "g/cm³ (g/dm³)",
+                nameRu: "Плотность",
+                nameLt: "Tankis",
+                defRu: "Физическая величина, определяемая как отношение массы вещества к занимаемому им объёму.",
+                defLt: "Fizikinis dydis, apibūdinantis medžiagos masę tūrio vienete."
+            },
+            {
+                id: 7,
+                symbol: "D",
+                unitRu: "безразмерная (нет)",
+                unitLt: "bedatė (nėra)",
+                nameRu: "Относительная плотность газов",
+                nameLt: "Santykinis dujų tankis",
+                defRu: "Отношение массы определенного объема одного газа к массе такого же объема другого газа при равных условиях.",
+                defLt: "Vieno dujų tūrio masės santykis su tokio pat tūrio kitų dujų mase tomis pačiomis sąlygomis."
+            },
+            {
+                id: 8,
+                symbol: "M",
+                unitRu: "г/моль",
+                unitLt: "g/mol",
+                nameRu: "Молярная масса",
+                nameLt: "Molinė masė",
+                defRu: "Масса одного моля вещества, численно совпадающая с относительной молекулярной массой.",
+                defLt: "Vieno molio medžiagos masė, išreikšta gramais vienam moliui."
+            },
+            {
+                id: 9,
+                symbol: "Vm",
+                unitRu: "дм³/моль",
+                unitLt: "dm³/mol",
+                nameRu: "Молярный объем газов",
+                nameLt: "Molinis dujų tūris",
+                defRu: "Объем одного моля газа при стандартных условиях (по IUPAC равен ровно 22.7 дм³/моль).",
+                defLt: "Vieno molio dujų užimamas tūris standartinėmis sąlygomis (IUPAC standartas: 22.7 dm³/mol)."
+            },
+            {
+                id: 10,
+                symbol: "NA",
+                unitRu: "моль⁻¹",
+                unitLt: "mol⁻¹",
+                nameRu: "Число Авогадро",
+                nameLt: "Avogadro skaičius",
+                defRu: "Количество структурных элементов в одном моле любого вещества (константа равна 6,022 * 10²³).",
+                defLt: "Struktūrinių dalelių skaičius viename molyje bet kurios medžiagos (6.022 * 10²³ mol⁻¹)."
+            },
+            {
+                id: 11,
+                symbol: "w",
+                unitRu: "% или доли единицы",
+                unitLt: "% arba vieneto dalys",
+                nameRu: "Массовая доля элемента в соединении",
+                nameLt: "Elemento masės dalis junginyje",
+                defRu: "Отношение суммарной массы атомов конкретного элемента к общей молекулярной массе сложного вещества.",
+                defLt: "Elemento atomų masės santykis su visa sudėtinės medžiagos molekulinės formulės mase."
+            }
+        ];
+
+        // Language pack
+        const trans = {
+            ru: {
+                progTitle: "СТАТУС СИНТЕЗА ЯДРА",
+                progSubtitle: "Сопоставьте все 11 ключевых величин для завершения реакции",
+                winTitle: "ЯДРО СТАБИЛИЗИРОВАНО!",
+                winSubtitle: "Потрясающий результат! Вы успешно завершили ядерный синтез всех величин, продемонстрировав отличное понимание курса VBE.",
+                winScore: "ГЕНЕРАЦИЯ ЭНЕРГИИ",
+                winErrors: "АКТИВНЫЕ СБОИ",
+                audioOn: "ЗВУК: ВКЛ",
+                audioOff: "ЗВУК: ВЫКЛ",
+                lblEnergy: "ЭНЕРГИЯ",
+                lblErrors: "ОШИБКИ",
+                lblSymbols: "ОБОЗНАЧЕНИЯ",
+                lblUnits: "ЕДИНИЦЫ ИЗМЕРЕНИЯ",
+                lblDefinitions: "НАУЧНЫЕ ОПРЕДЕЛЕНИЯ",
+                lblFusionReaction: "РЕАКЦИЯ СИНТЕЗА",
+                lblSlotSymbol: "СИМВОЛ",
+                lblSlotUnit: "ЕДИНИЦА",
+                winRestartBtn: "Инициировать новый цикл",
+                fuseActive: "Инициировать синтез",
+                fuseEmpty: "Загрузите капсулы",
+                successToast: "Реакция успешна! Энергия +15.",
+                failToast: "СБОЙ! Энергетическая нестабильность."
+            },
+            lt: {
+                progTitle: "BRANDUOLIO SINTEZĖS BŪSENA",
+                progSubtitle: "Suderinkite visus 11 pagrindinių dydžių reakcijai užbaigti",
+                winTitle: "BRANDUOLYS STABILIZUOTAS!",
+                winSubtitle: "Puikus rezultatas! Sėkmingai atlikote visų cheminių dydžių sintezę, parodydami puikias VBE žinias.",
+                winScore: "SURENTA ENERGIJA",
+                winErrors: "AKTYVIOS KLAIDOS",
+                audioOn: "GARSAS: ĮJ.",
+                audioOff: "GARSAS: IŠJ.",
+                lblEnergy: "ENERGIJA",
+                lblErrors: "KLAIDOS",
+                lblSymbols: "ŽYMĖJIMAS",
+                lblUnits: "MATAVIMO VIENETAI",
+                lblDefinitions: "APIBRĖŽIMAI",
+                lblFusionReaction: "SINTEZĖS REAKCIJA",
+                lblSlotSymbol: "SIMBOLIS",
+                lblSlotUnit: "VIENETAS",
+                winRestartBtn: "Pradėti naują ciklą",
+                fuseActive: "Pradėti sintezę",
+                fuseEmpty: "Įkraukite kapsules",
+                successToast: "Sintezė sėkminga! Energija +15.",
+                failToast: "KLAIDA! Nesuderinami dydžiai."
+            }
+        };
+
+        // Game State Engine
+        let currentLang = "ru";
+        let score = 0;
+        let errors = 0;
+        let solvedIds = [];
+        let activeTarget = null; // Current quantity being solved
+        let userSelection = { symbolId: null, unitId: null, defId: null };
+        let audioEnabled = false;
+        
+        // Synth Audio setup (Tone.js fallback)
+        let synth, polySynth;
+
+        window.onload = function() {
+            initSpaceBackground();
+            setLanguage('ru');
+            resetGame();
+        };
+
+        // Helper: Classic Fisher-Yates shuffle algorithm
+        function shuffle(array) {
+            let currentIndex = array.length, randomIndex;
+            while (currentIndex !== 0) {
+                randomIndex = Math.floor(Math.random() * currentIndex);
+                currentIndex--;
+                [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+            }
+            return array;
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            
+            // Layout styling
+            document.getElementById('lang-ru').className = lang === 'ru'
+                ? "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white"
+                : "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200";
+            document.getElementById('lang-lt').className = lang === 'lt'
+                ? "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-indigo-600 text-white"
+                : "px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-slate-400 hover:text-slate-200";
+
+            translateStaticText();
+            renderActiveReactor();
+        }
+
+        function translateStaticText() {
+            const keys = trans[currentLang];
+            document.getElementById('prog-title').innerText = keys.progTitle;
+            document.getElementById('prog-subtitle').innerText = keys.progSubtitle;
+            document.getElementById('win-title').innerText = keys.winTitle;
+            document.getElementById('win-subtitle').innerText = keys.winSubtitle;
+            document.getElementById('win-score-label').innerText = keys.winScore;
+            document.getElementById('win-errors-label').innerText = keys.winErrors;
+            document.getElementById('lbl-energy').innerText = keys.lblEnergy;
+            document.getElementById('lbl-errors').innerText = keys.lblErrors;
+            document.getElementById('lbl-symbols').innerHTML = `<i class="fa-solid fa-compass-drafting text-amber-400"></i> ` + keys.lblSymbols;
+            document.getElementById('lbl-units').innerHTML = `<i class="fa-solid fa-weight-hanging text-emerald-400"></i> ` + keys.lblUnits;
+            document.getElementById('lbl-definitions').innerHTML = `<i class="fa-solid fa-graduation-cap text-cyan-400"></i> ` + keys.lblDefinitions;
+            document.getElementById('lbl-fusion-reaction').innerText = keys.lblFusionReaction;
+            document.getElementById('lbl-slot-symbol').innerText = keys.lblSlotSymbol;
+            document.getElementById('lbl-slot-unit').innerText = keys.lblSlotUnit;
+            document.getElementById('win-restart-btn').innerText = keys.winRestartBtn;
+            
+            const btn = document.getElementById('audio-toggle-btn');
+            btn.className = audioEnabled 
+                ? "bg-slate-900 hover:bg-slate-800 border border-slate-700/60 p-2.5 rounded-xl text-xs transition-all flex items-center gap-2 text-emerald-400"
+                : "bg-slate-900 hover:bg-slate-800 border border-slate-700/60 p-2.5 rounded-xl text-xs transition-all flex items-center gap-2 text-rose-400";
+            
+            document.getElementById('audio-icon').className = audioEnabled ? "fa-solid fa-volume-high" : "fa-solid fa-volume-xmark";
+            document.getElementById('audio-text').innerText = audioEnabled ? keys.audioOn : keys.audioOff;
+        }
+
+        function initSynth() {
+            if (typeof Tone !== 'undefined' && !synth) {
+                try {
+                    synth = new Tone.Synth().toDestination();
+                    polySynth = new Tone.PolySynth().toDestination();
+                    
+                    // Adjust volume slightly lower for comfort
+                    synth.volume.value = -8;
+                    polySynth.volume.value = -12;
+                } catch (e) {
+                    console.log("Tone.js AudioContext failed to load context safely: ", e);
+                }
+            }
+        }
+
+        function toggleAudio() {
+            audioEnabled = !audioEnabled;
+            if (audioEnabled) {
+                initSynth();
+                if (typeof Tone !== 'undefined') {
+                    Tone.start();
+                }
+                playTone('C4', '8n');
+            }
+            translateStaticText();
+        }
+
+        function playTone(note, duration) {
+            if (audioEnabled && synth) {
+                try {
+                    synth.triggerAttackRelease(note, duration);
+                } catch(e) {}
+            }
+        }
+
+        function playPolyTone(notes, duration) {
+            if (audioEnabled && polySynth) {
+                try {
+                    polySynth.triggerAttackRelease(notes, duration);
+                } catch(e) {}
+            }
+        }
+
+        // Space starfield script
+        function initSpaceBackground() {
+            const canvas = document.getElementById('space-starfield');
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+            let stars = [];
+
+            function resizeCanvas() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                initStars();
+            }
+
+            function initStars() {
+                stars = [];
+                const starCount = Math.min(100, Math.floor(canvas.width / 15));
+                for(let i=0; i<starCount; i++) {
+                    stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        radius: Math.random() * 1.5 + 0.2,
+                        speed: Math.random() * 0.05 + 0.01,
+                        alpha: Math.random()
+                    });
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#020617';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                stars.forEach(s => {
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(165, 180, 252, ${s.alpha})`;
+                    ctx.fill();
+
+                    s.y -= s.speed;
+                    if(s.y < 0) {
+                        s.y = canvas.height;
+                        s.x = Math.random() * canvas.width;
+                    }
+                });
+                requestAnimationFrame(draw);
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            resizeCanvas();
+            draw();
+        }
+
+        function resetGame() {
+            score = 0;
+            errors = 0;
+            solvedIds = [];
+            resetActiveSelection();
+            
+            document.getElementById('victory-panel').classList.add('hidden');
+            
+            // Pull a random quantity to solve first
+            selectNextActiveTarget();
+            renderActiveReactor();
+            updateScoreBoard();
+        }
+
+        function resetActiveSelection() {
+            userSelection = { symbolId: null, unitId: null, defId: null };
+            
+            // Visual Slots reset
+            document.getElementById('slot-symbol-val').innerHTML = "-";
+            document.getElementById('slot-unit-val').innerHTML = "-";
+            document.getElementById('slot-symbol').className = "absolute top-4 w-16 h-16 rounded-xl bg-slate-900 border border-dashed border-amber-500/30 flex flex-col items-center justify-center transition-all duration-300";
+            document.getElementById('slot-unit').className = "absolute bottom-4 w-20 h-16 rounded-xl bg-slate-900 border border-dashed border-emerald-500/30 flex flex-col items-center justify-center transition-all duration-300";
+            document.getElementById('core-emblem-icon').className = "fa-solid fa-radiation text-3xl text-indigo-500/40 animate-spin";
+            
+            const btn = document.getElementById('fuse-btn');
+            btn.disabled = true;
+            btn.className = "w-full max-w-xs bg-slate-800 text-slate-500 font-game font-bold py-3.5 px-6 rounded-2xl border border-slate-700/60 cursor-not-allowed transition-all text-sm tracking-wider uppercase";
+            btn.innerText = trans[currentLang].fuseEmpty;
+        }
+
+        function selectNextActiveTarget() {
+            const unsolved = quantities.filter(q => !solvedIds.includes(q.id));
+            if (unsolved.length === 0) {
+                triggerVictory();
+                return;
+            }
+            // Pick random target
+            const randomIndex = Math.floor(Math.random() * unsolved.length);
+            activeTarget = unsolved[randomIndex];
+            resetActiveSelection();
+        }
+
+        function renderActiveReactor() {
+            if(!activeTarget) return;
+
+            // Set central target name
+            document.getElementById('target-quantity-name').innerText = currentLang === 'ru' 
+                ? activeTarget.nameRu 
+                : activeTarget.nameLt;
+
+            // Generate distractors pools
+            // Pool consists of the correct answer plus 3 random distractors
+            const createPool = (keyExtractor) => {
+                let correctAnswer = keyExtractor(activeTarget);
+                let pool = [ { id: activeTarget.id, value: correctAnswer } ];
+                
+                // Fetch other distinct answers
+                let others = quantities.filter(q => q.id !== activeTarget.id);
+                shuffle(others);
+                
+                for(let i=0; i<Math.min(3, others.length); i++) {
+                    pool.push({
+                        id: others[i].id,
+                        value: keyExtractor(others[i])
+                    });
+                }
+                return shuffle(pool);
+            };
+
+            // Symbols Pool
+            const symbolsPool = createPool(q => q.symbol);
+            const symbolsContainer = document.getElementById('capsule-symbols');
+            symbolsContainer.innerHTML = '';
+            symbolsPool.forEach(item => {
+                const node = document.createElement('button');
+                const isSelected = userSelection.symbolId === item.id;
+                node.className = `w-[calc(50%-6px)] md:w-full p-3 rounded-xl transition-all font-game font-bold text-sm tracking-wider flex items-center justify-center min-h-[46px] ${
+                    isSelected 
+                        ? 'bg-amber-500/20 active neon-border-amber text-amber-200' 
+                        : 'bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-400'
+                }`;
+                node.innerHTML = formatSubscripts(item.value);
+                node.onclick = () => selectCapsule('symbolId', item.id, item.value);
+                symbolsContainer.appendChild(node);
+            });
+
+            // Units Pool
+            const unitsPool = createPool(q => currentLang === 'ru' ? q.unitRu : q.unitLt);
+            const unitsContainer = document.getElementById('capsule-units');
+            unitsContainer.innerHTML = '';
+            unitsPool.forEach(item => {
+                const node = document.createElement('button');
+                const isSelected = userSelection.unitId === item.id;
+                node.className = `w-[calc(50%-6px)] md:w-full p-3 rounded-xl transition-all font-semibold text-xs tracking-wide flex items-center justify-center text-center min-h-[46px] ${
+                    isSelected 
+                        ? 'bg-emerald-500/20 active neon-border-emerald text-emerald-200' 
+                        : 'bg-slate-900/60 hover:bg-slate-800 border border-slate-800 text-slate-400'
+                }`;
+                node.innerHTML = item.value;
+                node.onclick = () => selectCapsule('unitId', item.id, item.value);
+                unitsContainer.appendChild(node);
+            });
+
+            // Definitions Pool (3 nodes max to prevent vertical scrolling overflow)
+            const defsPool = createPool(q => currentLang === 'ru' ? q.defRu : q.defLt);
+            const defsContainer = document.getElementById('capsule-defs');
+            defsContainer.innerHTML = '';
+            defsPool.forEach(item => {
+                const node = document.createElement('button');
+                const isSelected = userSelection.defId === item.id;
+                node.className = `w-full p-4 rounded-xl text-left transition-all flex flex-col gap-1 ${
+                    isSelected 
+                        ? 'bg-cyan-500/10 active neon-border-cyan text-cyan-200' 
+                        : 'bg-slate-900/60 hover:bg-slate-800 border border-slate-800/80 text-slate-300'
+                }`;
+                node.innerHTML = `
+                    <p class="text-[11px] font-bold tracking-widest text-cyan-400 font-game uppercase">Капсула-определение</p>
+                    <p class="text-[12px] leading-relaxed font-normal">${item.value}</p>
+                `;
+                node.onclick = () => selectCapsule('defId', item.id, item.value);
+                defsContainer.appendChild(node);
+            });
+        }
+
+        function selectCapsule(type, id, value) {
+            playTone(type === 'symbolId' ? 'E4' : type === 'unitId' ? 'G4' : 'B4', '16n');
+            
+            userSelection[type] = id;
+
+            // Direct animations into reactor slots
+            if (type === 'symbolId') {
+                const slot = document.getElementById('slot-symbol');
+                const val = document.getElementById('slot-symbol-val');
+                val.innerHTML = formatSubscripts(value);
+                slot.className = "absolute top-4 w-16 h-16 rounded-xl bg-amber-500/20 border neon-border-amber flex flex-col items-center justify-center transition-all duration-300 scale-105 active";
+            } else if (type === 'unitId') {
+                const slot = document.getElementById('slot-unit');
+                const val = document.getElementById('slot-unit-val');
+                val.innerHTML = value;
+                slot.className = "absolute bottom-4 w-20 h-16 rounded-xl bg-emerald-500/20 border neon-border-emerald flex flex-col items-center justify-center transition-all duration-300 scale-105 active";
+            } else if (type === 'defId') {
+                // Flash core emblem
+                document.getElementById('core-emblem-icon').className = "fa-solid fa-radiation text-3xl text-cyan-400 animate-spin";
+            }
+
+            // Verify if FUSE ready
+            const isReady = userSelection.symbolId !== null && userSelection.unitId !== null && userSelection.defId !== null;
+            const btn = document.getElementById('fuse-btn');
+            if(isReady) {
+                btn.disabled = false;
+                btn.className = "w-full max-w-xs bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-600 hover:scale-105 text-white font-game font-bold py-3.5 px-6 rounded-2xl border-none cursor-pointer transition-all text-sm tracking-wider uppercase shadow-[0_0_20px_rgba(99,102,241,0.4)]";
+                btn.innerText = trans[currentLang].fuseActive;
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full max-w-xs bg-slate-800 text-slate-500 font-game font-bold py-3.5 px-6 rounded-2xl border border-slate-700/60 cursor-not-allowed transition-all text-sm tracking-wider uppercase";
+                btn.innerText = trans[currentLang].fuseEmpty;
+            }
+
+            renderActiveReactor();
+        }
+
+        function fuseReactor() {
+            const isCorrect = userSelection.symbolId === activeTarget.id && 
+                              userSelection.unitId === activeTarget.id && 
+                              userSelection.defId === activeTarget.id;
+
+            const ring = document.getElementById('reactor-core-ring');
+
+            if(isCorrect) {
+                // Correct match!
+                playPolyTone(['C4', 'E4', 'G4', 'C5'], '4n');
+                
+                score += 15;
+                solvedIds.push(activeTarget.id);
+
+                // Success flash animation
+                ring.classList.add('border-emerald-500', 'shadow-[0_0_50px_rgba(16,185,129,0.8)]', 'bg-emerald-950/20');
+                document.getElementById('core-emblem-icon').className = "fa-solid fa-circle-check text-3xl text-emerald-400 animate-pulse";
+
+                setTimeout(() => {
+                    ring.classList.remove('border-emerald-500', 'shadow-[0_0_50px_rgba(16,185,129,0.8)]', 'bg-emerald-950/20');
+                    selectNextActiveTarget();
+                    renderActiveReactor();
+                    updateScoreBoard();
+                }, 1000);
+
+            } else {
+                // Mistake!
+                playPolyTone(['F#3', 'C#4'], '4n');
+                errors++;
+                score = Math.max(0, score - 5);
+
+                // Error shaking animation
+                ring.classList.add('reactor-error');
+                
+                setTimeout(() => {
+                    ring.classList.remove('reactor-error');
+                    resetActiveSelection();
+                    renderActiveReactor();
+                    updateScoreBoard();
+                }, 850);
+            }
+        }
+
+        function updateScoreBoard() {
+            document.getElementById('score-counter').innerText = score;
+            document.getElementById('errors-counter').innerText = errors;
+            
+            const pct = Math.round((solvedIds.length / quantities.length) * 100);
+            document.getElementById('progress-bar-fill').style.width = `${pct}%`;
+            document.getElementById('progress-ratio').innerText = `${solvedIds.length}/${quantities.length}`;
+        }
+
+        function triggerVictory() {
+            playPolyTone(['C4', 'E4', 'G4', 'C5', 'E5', 'G5'], '2n');
+            
+            document.getElementById('game-workspace').classList.add('hidden');
+            document.getElementById('victory-panel').classList.remove('hidden');
+
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-errors').innerText = errors;
+        }
+
+        function restartFullGame() {
+            document.getElementById('game-workspace').classList.remove('hidden');
+            resetGame();
+        }
+
+        function formatSubscripts(text) {
+            if (!text) return "";
+            return text
+                .replace("Ar", "A<sub>r</sub>")
+                .replace("Mr", "M<sub>r</sub>")
+                .replace("Vm", "V<sub>m</sub>")
+                .replace("NA", "N<sub>A</sub>")
+                .replace("mol-1", "mol<sup>-1</sup>")
+                .replace("моль-1", "моль<sup>-1</sup>")
+                .replace("dm3", "dm<sup>3</sup>")
+                .replace("cm3", "cm<sup>3</sup>")
+                .replace("дм3", "дм<sup>3</sup>")
+                .replace("см3", "см<sup>3</sup>");
+        }
+    </script>
+</body>
+</html>
